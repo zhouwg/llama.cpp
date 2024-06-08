@@ -2709,8 +2709,7 @@ struct ggml_backend_qnn_buffer_context {
 };
 
 
-struct ggml_backend_qnn_buffer_type {
-    ggml_backend_buffer_type base;
+struct ggml_backend_qnn_buffer_type_context {
     size_t device;
     std::string name;
 };
@@ -2852,7 +2851,7 @@ static void * ggml_qnn_host_malloc(size_t n) {
 
 
 GGML_CALL static ggml_backend_buffer_t ggml_backend_qnn_buffer_type_alloc_buffer(ggml_backend_buffer_type_t buft, size_t size) {
-    ggml_backend_qnn_buffer_type * buft_ctx = (ggml_backend_qnn_buffer_type *)buft->context;
+    ggml_backend_qnn_buffer_type_context * buft_ctx = (ggml_backend_qnn_buffer_type_context *)buft->context;
     ggml_backend_qnn_buffer_context * ctx = new ggml_backend_qnn_buffer_context(buft_ctx->device);
 
     const size_t size_page = sysconf(_SC_PAGESIZE);
@@ -3075,14 +3074,13 @@ ggml_backend_buffer_type_t ggml_backend_qnn_buffer_type(size_t device) {
         return nullptr;
     }
 
-    static ggml_backend_qnn_buffer_type ggml_backend_qnn_buffer_types[GGML_QNN_MAX_DEVICES];
+    static ggml_backend_buffer_type ggml_backend_qnn_buffer_types[GGML_QNN_MAX_DEVICES];
 
     static bool ggml_backend_qnn_buffer_type_initialized = false;
 
     if (!ggml_backend_qnn_buffer_type_initialized) {
         for (int i = 0; i < GGML_QNN_MAX_DEVICES; i++) {
-            auto &buffer_type = ggml_backend_qnn_buffer_types[i];
-            buffer_type.base = {
+            ggml_backend_qnn_buffer_types[i] = {
                 /* .iface   = */ {
                     /* .get_name         = */ ggml_backend_qnn_buffer_type_name,
                     /* .alloc_buffer     = */ ggml_backend_qnn_buffer_type_alloc_buffer,
@@ -3092,15 +3090,13 @@ ggml_backend_buffer_type_t ggml_backend_qnn_buffer_type(size_t device) {
                     /* .supports_backend = */ ggml_backend_qnn_buffer_type_supports_backend,
                     /* .is_host          = */ ggml_backend_qnn_buffer_is_host
                 },
-                /* .context = */ &buffer_type,
+                /* .context = */ new ggml_backend_qnn_buffer_type_context { device, GGML_QNN_NAME + std::to_string(device) },
             };
-            buffer_type.device = i;
-            buffer_type.name = GGML_QNN_NAME + std::to_string(i);
         }
         ggml_backend_qnn_buffer_type_initialized = true;
     }
 
-    return &ggml_backend_qnn_buffer_types[device].base;
+    return &ggml_backend_qnn_buffer_types[device];
 }
 
 

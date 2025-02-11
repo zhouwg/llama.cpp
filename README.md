@@ -1,9 +1,24 @@
 # About ggml-qnn
 pls refer to <a href="https://github.com/zhouwg/kantv/blob/master/README-qnn.md">README-qnn.md</a>.
 
-I made a stupid git operation mistake when submit ggml-qnn source code in this forked project and then caused testcase test-backend-ops failed.<a href="https://github.com/zhouwg/kantv/tree/master">project kantv</a> is the main playground of ggml-qnn and this backend works pretty good on Xiaomi14(Qualcomm Snapdragon Gen 3 equipped Android phone).ggml-qnn backend can be verified with project kantv:using a standard Android APP built from master branch in <a href="https://github.com/zhouwg/kantv/tree/master">project kantv</a>  to verify this PR then you will find the "aha moment" (this backend works pretty good with whipser.cpp, llama.cpp, UT, UT-automation(which similar to test-backend-ops)) in the logs of "adb logcat | grep KANTV".
+how to verify ggml-qnn backend on Qualcomm mobile SoC equipped Android phone via the official command line UT:
 
-currently no guarantees with command line testcase such as llama-cli and test-backend-ops because of my limited resource, although the source code of ggml-qnn.h and ggml-qnn.cpp are both same in project kantv and here. I'll make them works as expected in the upstream llama.cpp community.
+```
+  git clone https://github.com/zhouwg/llama.cpp
+  cd llama.cpp
+  git checkout ggml-qnn-for-latest-upstream-llamacpp
+  ./build-run-android.sh build          (it'll setup local build envs automatically and build the entire project)
+  ./build-run-android.sh updateqnnlib   (upload Qualcomm's QNN binary runtime libs to Android phone)
+  ./build-run-android.sh run            (running llama-cli on Android pohone)
+  ./build-run-android.sh run_testop     (running test-backend-ops on Android phone)
+```
+
+the source code of ggml-qnn.h and ggml-qnn.cpp are both <b>same</b> in project kantv and here. the behaviours of them should be same:
+
+- the official command line UT test-backend-ops works fine on Xiaomi14(Qualcomm Snapdragon Gen 3 equipped Android phone)
+- behaviour of the officail command line UT llama-cli works not as expected on Xiaomi14(Qualcomm Snapdragon Gen 3 equipped Android phone)(it verified and works before 02/10/2025 but I made a stupid git operation mistake when submit source code to github), but LLM inference with this ggml-backend works pretty good in a standard Android APP built from master branch in project kantv. I'll fix this strange issue later.
+
+the <b>main playground</b> of ggm-qnn backend is project kantv, I personally recommend that using <b>a standard Android APP</b> built from master branch in project kantv to verify this PR then you will find the "<b>aha moment</b>" from the log output of "adb logcat | grep KANTV".
 
 # llama.cpp
 

@@ -133,7 +133,9 @@ function run_llamacli()
 {
     check_qnn_libs
 
-    adb push ./out/android/bin/*.so ${REMOTE_PATH}/
+    if [ -f ./out/android/bin/libggml-qnn.so ]; then
+        adb push ./out/android/bin/*.so ${REMOTE_PATH}/
+    fi
     adb push ${LLAMA_CLI}-android ${REMOTE_PATH}/${LLAMA_CLI}
     adb shell chmod +x ${REMOTE_PATH}/${LLAMA_CLI}
 
@@ -147,7 +149,9 @@ function run_test-backend-ops()
 {
     check_qnn_libs
 
-    adb push ./out/android/bin/*.so ${REMOTE_PATH}/
+    if [ -f ./out/android/bin/libggml-qnn.so ]; then
+        adb push ./out/android/bin/*.so ${REMOTE_PATH}/
+    fi
     adb push ./out/android/bin/test-backend-ops ${REMOTE_PATH}/
     adb shell chmod +x ${REMOTE_PATH}/test-backend-ops
 

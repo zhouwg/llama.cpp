@@ -9,15 +9,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_VERBOSE_MAKEFILE on)
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Android")
-add_definitions(-DGGML_USE_QNN)
-add_definitions(-D__aarch64__)
-add_definitions(-D__linux__)
-add_definitions(-DGGML_USE_CPU)
-add_definitions(-D__ARM_NEON)
-add_definitions(-DGGML_USE_LLAMAFILE)
-endif()
-
 if (NOT XCODE AND NOT MSVC AND NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")

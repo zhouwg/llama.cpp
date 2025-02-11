@@ -18,7 +18,7 @@
  * section-6 does implementation of ggml-qnn backend according to ggml's backend subsystem
  *
  * currently I only provide GGML_OP_ADD's QNN backend implementation as a skeleton,
- * you can expand other ggml ops as your need(porting to Windows on ARM) or expertise
+ * you can expand other ggml ops as your expertise or as your need(porting to Windows on ARM).
  *
  * we love open source culture and we follow the rules, enjoy the great llama.cpp and enjoy ggml-qnn
  */

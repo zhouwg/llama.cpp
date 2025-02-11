@@ -3,6 +3,8 @@ pls refer to <a href="https://github.com/zhouwg/kantv/blob/master/README-qnn.md"
 
 I made a stupid git operation mistake when submit ggml-qnn source code in this forked project and then caused testcase test-backend-ops failed.<a href="https://github.com/zhouwg/kantv/tree/master">project kantv</a> is the main playground of ggml-qnn and this backend works pretty good on Xiaomi14(Qualcomm Snapdragon Gen 3 equipped Android phone).ggml-qnn backend can be verified with project kantv:using a standard Android APP built from master branch in <a href="https://github.com/zhouwg/kantv/tree/master">project kantv</a>  to verify this PR then you will find the "aha moment" (this backend works pretty good with whipser.cpp, llama.cpp, UT, UT-automation(which similar to test-backend-ops)) in the logs of "adb logcat | grep KANTV".
 
+currently no guarantees with command line testcase such as llama-cli and test-backend-ops because of my limited resource, although the source code of ggml-qnn.h and ggml-qnn.cpp are both same in project kantv and here. I'll make them works as expected in the upstream llama.cpp community.
+
 # llama.cpp
 
 ![llama](https://user-images.githubusercontent.com/1991296/230134379-7181e485-c521-4d23-a0d6-f7b3b61ba524.png)

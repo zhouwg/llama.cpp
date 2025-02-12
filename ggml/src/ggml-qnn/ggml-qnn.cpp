@@ -122,7 +122,7 @@ static void ggmlqnn_log_internal(ggml_log_level level, const char * file, const 
 #define GGMLQNN_DEBUG                           1  // for troubleshooting QNN backend
 #define GGML_QNN_LOGBUF_LEN                     4096
 #define ENABLE_QNNBACKEND_PERF                  1  // enable/disable op's perf info
-#define GGMLQNN_PRINT_QNN_INTERNAL_LOG          0
+#define GGMLQNN_PRINT_QNN_INTERNAL_LOG          0  // enable/disable QNN's internal log
 #define GGMLQNN_LOG_ERROR(...) ggmlqnn_log_internal(GGML_LOG_LEVEL_DEBUG,  __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
 #define GGMLQNN_LOG_WARN(...)  ggmlqnn_log_internal(GGML_LOG_LEVEL_DEBUG , __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
 #define GGMLQNN_LOG_INFO(...)  ggmlqnn_log_internal(GGML_LOG_LEVEL_DEBUG , __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
@@ -790,7 +790,6 @@ static int deep_copy_qnn_tensors(Qnn_Tensor_t & src, Qnn_Tensor_t & dst) {
     Qnn_QuantizeParams_t src_qparam      = QNN_TENSOR_GET_QUANT_PARAMS(src);
     Qnn_QuantizationEncoding_t encoding = src_qparam.quantizationEncoding;
     if (encoding == QNN_QUANTIZATION_ENCODING_AXIS_SCALE_OFFSET) {
-        //FIXME: memory leak here although following codes couldn't be executed in this PR
         Qnn_QuantizeParams_t src_qparam_cpy      = src_qparam;
         Qnn_AxisScaleOffset_t & axis_scale_offset = src_qparam_cpy.axisScaleOffsetEncoding;
         Qnn_ScaleOffset_t ** scale_offset          = &axis_scale_offset.scaleOffset;
@@ -802,7 +801,6 @@ static int deep_copy_qnn_tensors(Qnn_Tensor_t & src, Qnn_Tensor_t & dst) {
                         scale_offset_size);
         QNN_TENSOR_SET_QUANT_PARAMS(dst, src_qparam_cpy);
     } else if (encoding == QNN_QUANTIZATION_ENCODING_BW_AXIS_SCALE_OFFSET) {
-        //FIXME: memory leak here although following codes couldn't be executed in this PR
         Qnn_QuantizeParams_t src_qparam_cpy          = src_qparam;
         Qnn_BwAxisScaleOffset_t & bwaxis_scale_offset = src_qparam_cpy.bwAxisScaleOffsetEncoding;
         size_t scale_size                          = bwaxis_scale_offset.numElements * sizeof(float);
@@ -825,6 +823,7 @@ static int deep_copy_qnn_tensors(Qnn_Tensor_t & src, Qnn_Tensor_t & dst) {
     QNN_TENSOR_SET_RANK(dst, rank);
     size_t dim_size       = rank * sizeof(uint32_t);
     uint32_t * dimensions = (uint32_t *)malloc(dim_size);
+    GGMLQNN_LOG_DEBUG("tensor dims %p", dimensions);
     if (dimensions == nullptr) {
         GGMLQNN_LOG_WARN("deep_copy_qnn_tensors() allocation error while copying tensor %s\n", QNN_TENSOR_GET_NAME(src));
         return 1;
@@ -838,10 +837,20 @@ static int deep_copy_qnn_tensors(Qnn_Tensor_t & src, Qnn_Tensor_t & dst) {
 static int free_qnn_tensor(Qnn_Tensor_t * tensor) {
     int err = 0;
     VALIDATE_TENSOR_VERSION(*tensor, err);
+    free((void *) QNN_TENSOR_GET_NAME(*tensor));
 
-    free((void *) QNN_TENSOR_GET_NAME(tensor));
-    //FIXME: memory leak here
-    //free(QNN_TENSOR_GET_DIMENSIONS(tensor));
+    Qnn_QuantizeParams_t src_qparam      = QNN_TENSOR_GET_QUANT_PARAMS(*tensor);
+    Qnn_QuantizationEncoding_t encoding = src_qparam.quantizationEncoding;
+    if (encoding == QNN_QUANTIZATION_ENCODING_AXIS_SCALE_OFFSET) {
+        free(src_qparam.axisScaleOffsetEncoding.scaleOffset);
+    } else if (encoding == QNN_QUANTIZATION_ENCODING_BW_AXIS_SCALE_OFFSET) {
+        free(src_qparam.bwAxisScaleOffsetEncoding.scales);
+        if (src_qparam.bwAxisScaleOffsetEncoding.offsets != nullptr) {
+            free(src_qparam.bwAxisScaleOffsetEncoding.offsets);
+        }
+    }
+    GGMLQNN_LOG_DEBUG("tensor dims %p", QNN_TENSOR_GET_DIMENSIONS(*tensor));
+    free(QNN_TENSOR_GET_DIMENSIONS(*tensor));
     free(tensor);
 
     return err;
@@ -1414,7 +1423,7 @@ Qnn_Tensor_t * ggml_qnn_create_tensor(const ggml_tensor * tensor) {
     Qnn_ErrorHandle_t error = QNN_SUCCESS;
     char tensor_name[GGML_MAX_NAME] = {0};
 
-    //FIXME:remove get_idx() and inc_idx() in the future
+    //FIXME:remove get_idx() and inc_idx() in the future but ensure the tensor name is unique
     snprintf(tensor_name, GGML_MAX_NAME, "tensor_%2d", get_idx());
     GGMLQNN_LOG_DEBUG("init_tensor %d", get_idx());
     inc_idx();
@@ -1920,7 +1929,7 @@ private:
 
     int unload_system();
 
-    int load_backend(std::string &lib_path, const QnnSaver_Config_t ** saver_config);
+    int load_backend(std::string & lib_path, const QnnSaver_Config_t ** saver_config);
 
     int unload_backend();
 
@@ -1928,7 +1937,7 @@ private:
         _qnn_raw_interface = raw_interface;
     }
 
-    void set_qnn_raw_system_interface(QNN_SYSTEM_INTERFACE_VER_TYPE &raw_interface) {
+    void set_qnn_raw_system_interface(QNN_SYSTEM_INTERFACE_VER_TYPE & raw_interface) {
         _qnn_raw_system_interface = raw_interface;
     }
 
@@ -3110,10 +3119,16 @@ static void ggml_qnn_add(ggml_backend_t backend, ggml_tensor * op) {
             GGMLQNN_LOG_INFO("error = %d\n", error);
         }
     }
+
+    //avoid memory leak in func free_qnn_tensor
+    QNN_VER_PTR(*tensor_0)->dimensions = tensor_0_dimensions;
+    QNN_VER_PTR(*tensor_1)->dimensions = tensor_1_dimensions;
+    QNN_VER_PTR(*tensor_2)->dimensions = tensor_2_dimensions;
+
     op_perf.info();
 }
 
-//FIXME: there is an known issue in this function although it's not used in this PR
+//FIXME: there is a known issue in this function although it's not used in this PR
 /*
  * MUL_MAT take most of the compute time (about 95%). So to speed up llama, we have to focus on MUL_MAT.
  * We have three kinds of MUL_MAT to compute:
@@ -3295,6 +3310,12 @@ static void ggml_qnn_mul_mat(ggml_backend_t backend, ggml_tensor * op) {
             GGMLQNN_LOG_INFO("error = %d\n", error);
         }
     }
+
+    //avoid memory leak in func free_qnn_tensor
+    QNN_VER_PTR(*tensor_0)->dimensions = tensor_0_dimensions;
+    QNN_VER_PTR(*tensor_1)->dimensions = tensor_1_dimensions;
+    QNN_VER_PTR(*tensor_2)->dimensions = tensor_2_dimensions;
+
     op_perf.info();
 }
 
@@ -3795,7 +3816,7 @@ ggml_backend_t ggml_backend_qnn_init(size_t device, const char * qnn_lib_path) {
     }
 
     if (nullptr != g_qnn_mgr[device].backend) {
-        GGMLQNN_LOG_ERROR("qnn backend %d(%s) already loaded", device, ggml_backend_qnn_get_devname(device));
+        GGMLQNN_LOG_WARN("qnn backend %d(%s) already loaded", device, ggml_backend_qnn_get_devname(device));
         return g_qnn_mgr[device].backend;
     }
 

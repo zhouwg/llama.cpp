@@ -20,6 +20,10 @@ the source code of ggml-qnn.h and ggml-qnn.cpp are both <b>same</b> in project k
 
 the <b>main playground</b> of ggm-qnn backend is project kantv, I personally recommend that using <b>a standard Android APP</b> built from master branch in project kantv to verify this PR then you will find the "<b>aha moment</b>" from the log output of "adb logcat | grep KANTV".
 
+# Status
+
+This project has moved into <a href="https://github.com/kantv-ai/llama.cpp">llama.cpp in kantv-ai</a> since 02-14-2025, so it's no longer maintained.
+
 # llama.cpp
 
 ![llama](https://user-images.githubusercontent.com/1991296/230134379-7181e485-c521-4d23-a0d6-f7b3b61ba524.png)
